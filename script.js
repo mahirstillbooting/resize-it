@@ -258,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.dispatchEvent(mouseEvent);
     }, { passive: false });
 
-    window.addEventListener('touchmove', e => {
+    canvas.addEventListener('touchmove', e => {
         const touch = e.touches[0];
         const mouseEvent = new MouseEvent("mousemove", {
             clientX: touch.clientX,

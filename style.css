@@ -617,8 +617,7 @@ body.dark-mode .actions .btn-icon:hover {
     appearance: none;
     width: 150px;
     background: transparent; 
-    cursor: pointer;
-    touch-action: none; 
+    cursor: pointer; 
     height: 15px; 
 }
 
