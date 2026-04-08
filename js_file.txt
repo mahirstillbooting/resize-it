@@ -1,0 +1,221 @@
+/**
+ * PureCrop - Professional 8-Point Resizing Logic
+ * Integrated with the user-provided HTML structure.
+ */
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("PureCrop Engine Initialized.");
+
+    // --- DOM Elements ---
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas ? canvas.getContext('2d') : null;
+    
+    const initBtn = document.getElementById('initBtn');
+    const fileInput = document.getElementById('fileInput');
+    const dropZone = document.getElementById('dropZone');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const bgColorPicker = document.getElementById('bgColorPicker');
+
+    const step1 = document.getElementById('step1');
+    const step2 = document.getElementById('step2');
+    const step3 = document.getElementById('step3');
+
+    // --- State Variables ---
+    let img = new Image();
+    let isImageLoaded = false;
+    let canvasBgColor = "#ffffff";
+
+    let imgState = {
+        x: 0, y: 0,
+        width: 0, height: 0,
+        isDragging: false,
+        activeHandle: null,
+        dragStartX: 0, dragStartY: 0,
+        handleSize: 10 
+    };
+
+    // --- 1. Step 1: Initialize Workspace ---
+    if (initBtn) {
+        initBtn.addEventListener('click', () => {
+            const w = parseInt(document.getElementById('canvasWidth').value);
+            const h = parseInt(document.getElementById('canvasHeight').value);
+            
+            if (w >= 100 && h >= 100 && canvas) {
+                canvas.width = w;
+                canvas.height = h;
+                
+                // UI Transition
+                step1.style.display = 'none';
+                step2.style.display = 'block';
+                draw(); 
+            } else {
+                alert("Please enter valid dimensions (min 100px).");
+            }
+        });
+    }
+
+    // --- 2. Step 2: Upload Logic ---
+    if (dropZone && fileInput) {
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = event => {
+                    img.onload = () => {
+                        isImageLoaded = true;
+                        const ratio = img.width / img.height;
+                        
+                        // Fit image to 70% of canvas
+                        imgState.width = canvas.width * 0.7;
+                        imgState.height = imgState.width / ratio;
+                        
+                        // If height overflows, scale by height instead
+                        if(imgState.height > canvas.height * 0.7) {
+                            imgState.height = canvas.height * 0.7;
+                            imgState.width = imgState.height * ratio;
+                        }
+
+                        imgState.x = (canvas.width - imgState.width) / 2;
+                        imgState.y = (canvas.height - imgState.height) / 2;
+                        
+                        step2.style.display = 'none';
+                        step3.style.display = 'block';
+                        draw();
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // --- 3. 8-Point Handle Logic ---
+    function getHandleCoordinates() {
+        const { x, y, width: w, height: h } = imgState;
+        return [
+            { x: x, y: y, id: 'tl' },           // Top Left
+            { x: x + w/2, y: y, id: 'tm' },     // Top Middle
+            { x: x + w, y: y, id: 'tr' },       // Top Right
+            { x: x + w, y: y + h/2, id: 'rm' }, // Right Middle
+            { x: x + w, y: y + h, id: 'br' },   // Bottom Right
+            { x: x + w/2, y: y + h, id: 'bm' }, // Bottom Middle
+            { x: x, y: y + h, id: 'bl' },       // Bottom Left
+            { x: x, y: y + h/2, id: 'lm' }      // Left Middle
+        ];
+    }
+
+    // --- 4. Main Draw Loop ---
+    function draw() {
+        if (!ctx) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Background
+        ctx.fillStyle = canvasBgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if (isImageLoaded) {
+            ctx.drawImage(img, imgState.x, imgState.y, imgState.width, imgState.height);
+            
+            // Draw Handles
+            const handles = getHandleCoordinates();
+            ctx.fillStyle = "#2563eb"; 
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2;
+            
+            handles.forEach(h => {
+                ctx.beginPath();
+                ctx.arc(h.x, h.y, imgState.handleSize / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            });
+        }
+    }
+
+// Added event listener for the checkbox to redraw instantly
+transparentCheck.addEventListener('change', draw);
+
+    // --- 5. Interaction Logic ---
+    canvas.addEventListener('mousedown', e => {
+        if (!isImageLoaded) return;
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        
+        const handles = getHandleCoordinates();
+        imgState.activeHandle = null;
+
+        // Check handle hits
+        for (const h of handles) {
+            const dist = Math.sqrt((mx - h.x)**2 + (my - h.y)**2);
+            if (dist < imgState.handleSize) {
+                imgState.activeHandle = h.id;
+                return;
+            }
+        }
+
+        // Check body hits for dragging
+        if (mx >= imgState.x && mx <= imgState.x + imgState.width &&
+            my >= imgState.y && my <= imgState.y + imgState.height) {
+            imgState.isDragging = true;
+            imgState.dragStartX = mx - imgState.x;
+            imgState.dragStartY = my - imgState.y;
+        }
+    });
+
+    window.addEventListener('mousemove', e => {
+        if (!imgState.isDragging && !imgState.activeHandle) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const min = 20;
+
+        if (imgState.activeHandle) {
+            const h = imgState.activeHandle;
+            const right = imgState.x + imgState.width;
+            const bottom = imgState.y + imgState.height;
+
+            if (h.includes('t')) { imgState.y = Math.min(my, bottom - min); imgState.height = bottom - imgState.y; }
+            if (h.includes('b')) { imgState.height = Math.max(min, my - imgState.y); }
+            if (h.includes('l')) { imgState.x = Math.min(mx, right - min); imgState.width = right - imgState.x; }
+            if (h.includes('r')) { imgState.width = Math.max(min, mx - imgState.x); }
+            
+            draw();
+        } else if (imgState.isDragging) {
+            imgState.x = mx - imgState.dragStartX;
+            imgState.y = my - imgState.dragStartY;
+            draw();
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        imgState.isDragging = false;
+        imgState.activeHandle = null;
+    });
+
+    // --- 6. Toolbar Actions ---
+    if (bgColorPicker) {
+        bgColorPicker.addEventListener('input', (e) => {
+            canvasBgColor = e.target.value;
+            draw();
+        });
+    }
+
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'purecrop-resized.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+    }
+
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            if(confirm("Reset current workspace?")) location.reload();
+        });
+    }
+});
