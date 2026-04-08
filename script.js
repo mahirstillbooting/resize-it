@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const dropZone = document.getElementById('dropZone');
     const downloadBtn = document.getElementById('downloadBtn');
     const resetBtn = document.getElementById('resetBtn');
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
     const bgColorPicker = document.getElementById('bgColorPicker');
     const transparentCheck = document.getElementById('transparentCheck');
     const viewScale = document.getElementById('viewScale');
@@ -86,6 +88,31 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Undo Button Click
+if (undoBtn) {
+    undoBtn.addEventListener('click', () => {
+        if (history.length > 1) {
+            redoStack.push({ ...imgState }); // Save current to redo
+            history.pop(); // Remove current
+            const prevState = history[history.length - 1];
+            imgState = { ...prevState, isDragging: false, activeHandle: null };
+            draw();
+        }
+    });
+}
+
+// Redo Button Click
+if (redoBtn) {
+    redoBtn.addEventListener('click', () => {
+        if (redoStack.length > 0) {
+            const nextState = redoStack.pop();
+            history.push({ ...nextState });
+            imgState = { ...nextState, isDragging: false, activeHandle: null };
+            draw();
+        }
+    });
+}
 
     // Check for saved user preference
     if (localStorage.getItem('theme') === 'dark') {
@@ -185,38 +212,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 5. Interaction Logic ---
-    canvas.addEventListener('mousedown', e => {
-        if (!isImageLoaded) return;
-        const rect = canvas.getBoundingClientRect();
-        const mx = e.clientX - rect.left;
-        const my = e.clientY - rect.top;
+canvas.addEventListener('mousedown', e => {
+    if (!isImageLoaded) return;
+    const pos = getMousePos(e);
+    const mx = pos.x;
+    const my = pos.y;
 
-        const handles = getHandleCoordinates();
-        imgState.activeHandle = null;
+    const handles = getHandleCoordinates();
+    imgState.activeHandle = null;
 
-        // 1. Check if we hit a Resize Handle first
-        for (const h of handles) {
-            const dist = Math.sqrt((mx - h.x) ** 2 + (my - h.y) ** 2);
-            if (dist < imgState.handleSize) {
-                imgState.activeHandle = h.id;
-                saveState(); // Save state at the start of a resize
-                return;
-            }
+    // Check Handles (Multiplying handleSize by 2 makes it easier to hit on mobile)
+    for (const h of handles) {
+        const dist = Math.sqrt((mx - h.x) ** 2 + (my - h.y) ** 2);
+        if (dist < imgState.handleSize * 1.5) {
+            imgState.activeHandle = h.id;
+            saveState();
+            return;
         }
+    }
 
-        // 2. Check if we hit the Image for Dragging
-        if (mx >= imgState.x && mx <= imgState.x + imgState.width &&
-            my >= imgState.y && my <= imgState.y + imgState.height) {
-
-            imgState.isDragging = true;
-            // This math is crucial: it remembers WHERE on the image you clicked
-            imgState.dragStartX = mx - imgState.x;
-            imgState.dragStartY = my - imgState.y;
-
-            saveState(); // Save state at the start of a move
-            canvas.style.cursor = 'grabbing'; // Visual feedback
-        }
-    });
+    // Check Image Drag
+    if (mx >= imgState.x && mx <= imgState.x + imgState.width &&
+        my >= imgState.y && my <= imgState.y + imgState.height) {
+        imgState.isDragging = true;
+        imgState.dragStartX = mx - imgState.x;
+        imgState.dragStartY = my - imgState.y;
+        saveState();
+        canvas.style.cursor = 'grabbing';
+    }
+});
 
 
     window.addEventListener('mouseup', () => {
@@ -251,37 +275,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // A single, unified move listener for both Mouse and Touch
-    const handleMove = (e) => {
-        if (!imgState.isDragging && !imgState.activeHandle) return;
+const handleMove = (e) => {
+    if (!imgState.isDragging && !imgState.activeHandle) return;
+    
+    const pos = getMousePos(e);
+    const mx = pos.x;
+    const my = pos.y;
+    const min = 20;
 
-        // Handle both Touch and Mouse coordinates
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    if (imgState.activeHandle) {
+        const h = imgState.activeHandle;
+        const right = imgState.x + imgState.width;
+        const bottom = imgState.y + imgState.height;
 
-        const rect = canvas.getBoundingClientRect();
-        const mx = clientX - rect.left;
-        const my = clientY - rect.top;
-        const min = 20;
+        if (h.includes('t')) { imgState.y = Math.min(my, bottom - min); imgState.height = bottom - imgState.y; }
+        if (h.includes('b')) { imgState.height = Math.max(min, my - imgState.y); }
+        if (h.includes('l')) { imgState.x = Math.min(mx, right - min); imgState.width = right - imgState.x; }
+        if (h.includes('r')) { imgState.width = Math.max(min, mx - imgState.x); }
+        draw();
+    } else if (imgState.isDragging) {
+        imgState.x = mx - imgState.dragStartX;
+        imgState.y = my - imgState.dragStartY;
+        draw();
+    }
 
-        if (imgState.activeHandle) {
-            const h = imgState.activeHandle;
-            const right = imgState.x + imgState.width;
-            const bottom = imgState.y + imgState.height;
-
-            if (h.includes('t')) { imgState.y = Math.min(my, bottom - min); imgState.height = bottom - imgState.y; }
-            if (h.includes('b')) { imgState.height = Math.max(min, my - imgState.y); }
-            if (h.includes('l')) { imgState.x = Math.min(mx, right - min); imgState.width = right - imgState.x; }
-            if (h.includes('r')) { imgState.width = Math.max(min, mx - imgState.x); }
-            draw();
-        } else if (imgState.isDragging) {
-            imgState.x = mx - imgState.dragStartX;
-            imgState.y = my - imgState.dragStartY;
-            draw();
-        }
-
-        // Crucial: Stop the phone from scrolling while dragging the image
-        if (e.cancelable) e.preventDefault();
-    };
+    if (e.cancelable) e.preventDefault();
+};
 
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('touchmove', handleMove, { passive: false });
@@ -362,12 +381,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-        // We divide by the current scale so your mouse still hits the handles perfectly
-        const currentScale = viewScale ? viewScale.value : 1;
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
 
         return {
-            x: (clientX - rect.left) / currentScale,
-            y: (clientY - rect.top) / currentScale
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
         };
     }
 
