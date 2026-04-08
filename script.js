@@ -90,29 +90,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Undo Button Click
-if (undoBtn) {
-    undoBtn.addEventListener('click', () => {
-        if (history.length > 1) {
-            redoStack.push({ ...imgState }); // Save current to redo
-            history.pop(); // Remove current
-            const prevState = history[history.length - 1];
-            imgState = { ...prevState, isDragging: false, activeHandle: null };
-            draw();
-        }
-    });
-}
+    if (undoBtn) {
+        undoBtn.addEventListener('click', () => {
+            if (history.length > 1) {
+                redoStack.push({ ...imgState }); // Save current to redo
+                history.pop(); // Remove current
+                const prevState = history[history.length - 1];
+                imgState = { ...prevState, isDragging: false, activeHandle: null };
+                draw();
+            }
+        });
+    }
 
-// Redo Button Click
-if (redoBtn) {
-    redoBtn.addEventListener('click', () => {
-        if (redoStack.length > 0) {
-            const nextState = redoStack.pop();
-            history.push({ ...nextState });
-            imgState = { ...nextState, isDragging: false, activeHandle: null };
-            draw();
-        }
-    });
-}
+    // Redo Button Click
+    if (redoBtn) {
+        redoBtn.addEventListener('click', () => {
+            if (redoStack.length > 0) {
+                const nextState = redoStack.pop();
+                history.push({ ...nextState });
+                imgState = { ...nextState, isDragging: false, activeHandle: null };
+                draw();
+            }
+        });
+    }
 
     // Check for saved user preference
     if (localStorage.getItem('theme') === 'dark') {
@@ -136,10 +136,9 @@ if (redoBtn) {
     if (viewScale) {
         viewScale.addEventListener('input', (e) => {
             const scale = e.target.value;
-            // This scales the visual display of the canvas without changing 
-            // the actual pixel data of your image.
-            canvas.style.transform = `scale(${scale})`;
-            scaleVal.innerText = `${Math.round(scale * 100)}%`;
+            scaleVal.textContent = `${Math.round(scale * 100)}%`;
+            mainCanvas.style.transform = `scale(${scale})`;
+
         });
     }
 
@@ -212,35 +211,35 @@ if (redoBtn) {
     }
 
     // --- 5. Interaction Logic ---
-canvas.addEventListener('mousedown', e => {
-    if (!isImageLoaded) return;
-    const pos = getMousePos(e);
-    const mx = pos.x;
-    const my = pos.y;
+    canvas.addEventListener('mousedown', e => {
+        if (!isImageLoaded) return;
+        const pos = getMousePos(e);
+        const mx = pos.x;
+        const my = pos.y;
 
-    const handles = getHandleCoordinates();
-    imgState.activeHandle = null;
+        const handles = getHandleCoordinates();
+        imgState.activeHandle = null;
 
-    // Check Handles (Multiplying handleSize by 2 makes it easier to hit on mobile)
-    for (const h of handles) {
-        const dist = Math.sqrt((mx - h.x) ** 2 + (my - h.y) ** 2);
-        if (dist < imgState.handleSize * 1.5) {
-            imgState.activeHandle = h.id;
-            saveState();
-            return;
+        // Check Handles (Multiplying handleSize by 2 makes it easier to hit on mobile)
+        for (const h of handles) {
+            const dist = Math.sqrt((mx - h.x) ** 2 + (my - h.y) ** 2);
+            if (dist < imgState.handleSize * 1.5) {
+                imgState.activeHandle = h.id;
+                saveState();
+                return;
+            }
         }
-    }
 
-    // Check Image Drag
-    if (mx >= imgState.x && mx <= imgState.x + imgState.width &&
-        my >= imgState.y && my <= imgState.y + imgState.height) {
-        imgState.isDragging = true;
-        imgState.dragStartX = mx - imgState.x;
-        imgState.dragStartY = my - imgState.y;
-        saveState();
-        canvas.style.cursor = 'grabbing';
-    }
-});
+        // Check Image Drag
+        if (mx >= imgState.x && mx <= imgState.x + imgState.width &&
+            my >= imgState.y && my <= imgState.y + imgState.height) {
+            imgState.isDragging = true;
+            imgState.dragStartX = mx - imgState.x;
+            imgState.dragStartY = my - imgState.y;
+            saveState();
+            canvas.style.cursor = 'grabbing';
+        }
+    });
 
 
     window.addEventListener('mouseup', () => {
@@ -275,32 +274,32 @@ canvas.addEventListener('mousedown', e => {
     });
 
     // A single, unified move listener for both Mouse and Touch
-const handleMove = (e) => {
-    if (!imgState.isDragging && !imgState.activeHandle) return;
-    
-    const pos = getMousePos(e);
-    const mx = pos.x;
-    const my = pos.y;
-    const min = 20;
+    const handleMove = (e) => {
+        if (!imgState.isDragging && !imgState.activeHandle) return;
 
-    if (imgState.activeHandle) {
-        const h = imgState.activeHandle;
-        const right = imgState.x + imgState.width;
-        const bottom = imgState.y + imgState.height;
+        const pos = getMousePos(e);
+        const mx = pos.x;
+        const my = pos.y;
+        const min = 20;
 
-        if (h.includes('t')) { imgState.y = Math.min(my, bottom - min); imgState.height = bottom - imgState.y; }
-        if (h.includes('b')) { imgState.height = Math.max(min, my - imgState.y); }
-        if (h.includes('l')) { imgState.x = Math.min(mx, right - min); imgState.width = right - imgState.x; }
-        if (h.includes('r')) { imgState.width = Math.max(min, mx - imgState.x); }
-        draw();
-    } else if (imgState.isDragging) {
-        imgState.x = mx - imgState.dragStartX;
-        imgState.y = my - imgState.dragStartY;
-        draw();
-    }
+        if (imgState.activeHandle) {
+            const h = imgState.activeHandle;
+            const right = imgState.x + imgState.width;
+            const bottom = imgState.y + imgState.height;
 
-    if (e.cancelable) e.preventDefault();
-};
+            if (h.includes('t')) { imgState.y = Math.min(my, bottom - min); imgState.height = bottom - imgState.y; }
+            if (h.includes('b')) { imgState.height = Math.max(min, my - imgState.y); }
+            if (h.includes('l')) { imgState.x = Math.min(mx, right - min); imgState.width = right - imgState.x; }
+            if (h.includes('r')) { imgState.width = Math.max(min, mx - imgState.x); }
+            draw();
+        } else if (imgState.isDragging) {
+            imgState.x = mx - imgState.dragStartX;
+            imgState.y = my - imgState.dragStartY;
+            draw();
+        }
+
+        if (e.cancelable) e.preventDefault();
+    };
 
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('touchmove', handleMove, { passive: false });
