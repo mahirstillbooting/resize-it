@@ -618,20 +618,21 @@ body.dark-mode .actions .btn-icon:hover {
     width: 150px;
     background: transparent; 
     cursor: pointer;
-    touch-action: none;
+    touch-action: none; 
+    height: 15px; 
 }
-
 
 #viewScale::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    margin-top: -9px; 
+    margin-top: -10px; 
     background-color: var(--primary);
-    height: 24px;
+    height: 24px; 
     width: 24px;
     border-radius: 50%;
-    border: 2px solid #ffffff; 
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    border: 3px solid #ffffff; 
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    pointer-events: auto;
 }
 
 #viewScale::-webkit-slider-runnable-track {
