@@ -586,3 +586,15 @@ body {
         }
     }
 }
+/* Specific override to force white arrows in dark mode */
+body.dark-mode .actions .btn-icon {
+    background-color: #2a2a2b !important;
+    color: #ffffff !important;
+    border-color: #444746 !important;
+}
+
+body.dark-mode .actions .btn-icon:hover {
+    background-color: #3c3c3d !important;
+    color: var(--primary) !important;
+    border-color: var(--primary) !important;
+}
