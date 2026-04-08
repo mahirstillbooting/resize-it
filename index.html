@@ -64,6 +64,11 @@
                         <span>Transparent</span>
                     </label>
                 </div>
+                <div class="tool">
+                    <label>View Scale:</label>
+                    <input type="range" id="viewScale" min="0.2" max="2" step="0.1" value="1">
+                    <span id="scaleVal">100%</span>
+                </div>
                 <div class="actions">
                     <button id="undoBtn" class="btn-icon" title="Undo">↩</button>
                     <button id="redoBtn" class="btn-icon" title="Redo">↪</button>
@@ -74,12 +79,6 @@
             <div class="canvas-wrapper">
                 <canvas id="mainCanvas"></canvas>
             </div>
-            <div class="tool">
-                <label>View Scale:</label>
-                <input type="range" id="viewScale" min="0.2" max="2" step="0.1" value="1">
-                <span id="scaleVal">100%</span>
-            </div>
-
             <p class="hint">Tip: Drag the blue handles to resize. Drag the image to move it.</p>
         </section>
     </main>
