@@ -137,6 +137,18 @@ body.dark-mode .ticker-wrap {
     border-top: 1px solid #444746;
 }
 
+body.dark-mode .btn-icon {
+    background: #2a2a2b;    
+    border-color: #444746;
+    color: #ffffff; /* This turns your ↩ and ↪ white */
+}
+
+body.dark-mode .btn-icon:hover {
+    background: #3c3c3d;
+    border-color: var(--primary);
+    color: var(--primary); /* Optional: arrows glow pink on hover */
+}
+
 .container {
     width: 100%;
     max-width: 900px;
